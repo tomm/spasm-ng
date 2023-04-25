@@ -19,7 +19,7 @@
 
 char *handle_directive (const char *ptr) {
 	static const char *dirs[] = {"db", "dw", "end", "org", "byte", "word", "fill", "block", "addinstr",
-		"echo", "error", "list", "nolist", "equ", "show", "option", "seek", "assume", "dl", "long", NULL};
+		"echo", "error", "list", "nolist", "equ", "show", "option", "seek", "assume", "dl", "long", "align", NULL};
 	char name_buf[32];
 	int dir;
 
@@ -93,6 +93,32 @@ char *handle_directive (const char *ptr) {
 			{
 				SetLastSPASMError(SPASM_ERR_VALUE_EXPECTED);
 			}
+			break;
+		}
+		case 20: //ALIGN
+		{
+			int align;
+			char szAlign[256];
+			bool old_listing_on = listing_on;
+
+			read_expr (&ptr, szAlign, "");
+			parse_num (szAlign, &align);
+			ptr = skip_whitespace (ptr);
+
+			if (align < 0) {
+				SetLastSPASMError(SPASM_ERR_SIZE_MUST_BE_POSITIVE, szAlign);
+				listing_on = old_listing_on;
+				break;
+			}
+
+			int fill_len = program_counter % align == 0 ? 0 : align - program_counter % align;
+
+			program_counter += fill_len;
+			stats_datasize += fill_len;
+
+			while (fill_len-- > 0)
+				write_out (0);
+
 			break;
 		}
 		case 6: //FILL
